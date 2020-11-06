@@ -4,12 +4,49 @@
 
 */
 #include <LiquidCrystal.h>
-  LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+  //LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+  LiquidCrystal lcd(12, 11, 5, 4, 25, 26); //changed wires to make space for encoder
 
+
+#define PWM1 10
+#define PWM2 9
+
+
+//void pulsing_R(void);
+//void pulsing_L(void);
+
+//int count = 0;
+
+#define encoderARight 23
+#define encoderALeft 24
+//#define encoderBRight 2
+//#define encoderBLeft 3
+
+#define directionR 2
+#define directionL 3
+
+volatile int R_pulse, L_pulse;
 
 void setup() {
+  pinMode(PWM1, OUTPUT);
+  pinMode(PWM2, OUTPUT);
+  //for motor example
+
+  //encoder pins
+  /*
+  pinMode(encoderARight, INPUT); //ENC A MotorRight
+  pinMode(encoderALeft, INPUT); //ENC A MotorLeft
+  pinMode(encoderBRight, INPUT); //ENC B MotorRight
+  pinMode(encoderBLeft, INPUT); //ENC B MotorLeft
+  */
+
+
+  attachInterrupt(digitalPinToInterrupt(directionR), pulsing_R, RISING);
+  attachInterrupt(digitalPinToInterrupt(directionL), pulsing_L, RISING);
 
   Serial.begin(9600); // open the serial port at 9600 bps:
+  
+  Serial.print("Intro");
   lcd.begin(20,4);
 }
 
@@ -17,56 +54,66 @@ void setup() {
 
 void loop() {
 
-  int LEDpinDim = 9;
-  int LEDpinDirection = 8;
+    //Serial.print(count);
+    lcd.setCursor(0, 0);
+    lcd.print("Sup jaakko");
+    //delay(200);
 
-
-
-
-
-  ///////////////////////////////////
-  //////   X-Value             //////
-  ///////////////////////////////////
-  //reads about 4.91V, never really hits full 5V
-    float sensorValueX = analogRead(A7);
-  
-    int lightX = ((sensorValueX - 491) / 532) * 255;
-    analogWrite(9,abs(lightX)); //LED power is on the longer metal leg
-  
-    sensorValueX = (sensorValueX - 510) / 5.1;
-  
-    int colX = (sensorValueX / 10) + 10;
-
-
-  ///////////////////////////////////
-  //////   Y-Value             //////
-  ///////////////////////////////////
-    float sensorValueY = analogRead(A6);
-  
-    int lightY = ((sensorValueY - 512) / 511) * 255;
-    analogWrite(8, abs(lightY)); //LED power is on the longer metal leg
     
-    sensorValueY = (sensorValueY - 513) / 5.13;
 
-  lcd.setCursor(0, 0);
-  lcd.print("X-value:");
-  lcd.print(sensorValueX);
-  lcd.print(" %");
-  Serial.print(sensorValueX);
+    analogWrite(PWM1, 240); 
+    analogWrite(PWM2, 240);  
 
-  lcd.setCursor(0, 1);
-  lcd.print("-100%     0%     100%");
 
-  lcd.setCursor(colX, 2);
-  lcd.print("I");
+    //current problem: 1 motor seems to work while the other doesn't
 
-  lcd.setCursor(0, 3);
-  lcd.print("Y-value:");
-  lcd.print(sensorValueY);
-  lcd.print(" %");
-  Serial.print(sensorValueY);
+}
 
-  delay(500);
+/*
+void pin_ISR()
+//this if statemeent currently doesnt work but is the idea of exercise isr 2.0
+//get after break try to get this to work lol
+//
+{
+  if(encoderBRight == HIGH) { //if pin 19 is presssed and pin 18 is HIGH, ++
+    count++;
+    lcd.setCursor(0, 1);
+    lcd.print("encoder B HIGH");
+  }
+  else { //if pin 19 is presssed and pin 18 is LOW, --
+    count--;
+    lcd.setCursor(0, 1);
+    lcd.print("encoder B low");
+  }
+  if(encoderARight == HIGH) { //if pin 19 is presssed and pin 18 is HIGH, ++
+    count++;
+    lcd.setCursor(0, 1);
+    lcd.print("encoder A HIGH");
+    
+  }
+  else { //if pin 19 is presssed and pin 18 is LOW, --
+    count--;
+    lcd.setCursor(0, 1);
+    lcd.print("encoder A low");
+  }
+ */
+
+
+ // Serial.print("Pressed");
   
-  lcd.clear();
+  //delay(500);
+
+
+
+
+void pulsing_R(void) {
+  if(digitalRead(directionR) == 0) { R_pulse--; } else R_pulse++;
+  lcd.setCursor(0, 1);
+  lcd.print("pulsing_R");  
+}
+
+void pulsing_L(void) {
+  if(digitalRead(directionL) == 0) { L_pulse--; } else L_pulse++;
+  lcd.setCursor(0, 1);
+  lcd.print("pulsing_L");
 }
