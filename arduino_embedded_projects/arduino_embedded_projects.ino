@@ -1,135 +1,136 @@
 /*
-  Uses a for loop to print numbers in various formats.
+  Uses a joystick to move a car around
 */
 #include <LiquidCrystal.h>
   //LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
   LiquidCrystal lcd(12, 11, 5, 4, 25, 26); //changed wires to make space for encoder
 
+#define R_count_inter_pin 3   // R encoder pulse counting interrupt pin
+#define L_count_inter_pin 2
 
-#define PWM1 10
-#define PWM2 9
+#define direction_R 23        //encoder direction pins
+#define direction_L 24
 
+//switched the pwm and direction pins for left & right motors..
+#define PWM_Motor_R 9 
+#define Dir_Motor_R 7
+#define PWM_Motor_L 10
+#define Dir_Motor_L 8
 
-//void pulsing_R(void);
-//void pulsing_L(void);
+#define forward 1
+#define backward 0
 
-//int count = 0;
+//pin 10 is for left motor
 
-#define encoderARight 23
-#define encoderALeft 24
-//#define encoderBRight 2
-//#define encoderBLeft 3
+volatile int R_pulse = 0, L_pulse = 0;
+volatile byte count = 0;
 
-#define directionR 2
-#define directionL 3
-
-volatile int R_pulse, L_pulse;
+//Joystick funciton
+void Joystick(int& x_val, int& y_val);
+//Perform drive distance
+void DriveDistance(int distL, int distR);
 
 void setup() {
-  pinMode(PWM1, OUTPUT);
-  pinMode(PWM2, OUTPUT);
-  //for motor example
-
-  //encoder pins
-  /*
-  pinMode(encoderARight, INPUT); //ENC A MotorRight
-  pinMode(encoderALeft, INPUT); //ENC A MotorLeft
-  pinMode(encoderBRight, INPUT); //ENC B MotorRight
-  pinMode(encoderBLeft, INPUT); //ENC B MotorLeft
-  */
-
-
-  attachInterrupt(digitalPinToInterrupt(directionR), pulsing_R, RISING);
-  attachInterrupt(digitalPinToInterrupt(directionL), pulsing_L, RISING);
-
   Serial.begin(9600); // open the serial port at 9600 bps:
-  
   Serial.print("Intro");
+  
   lcd.begin(20,4);
-}
 
- 
+  pinMode(R_count_inter_pin, INPUT);
+  pinMode(L_count_inter_pin, INPUT);
+
+  pinMode(direction_R,INPUT);    
+  digitalWrite(direction_R,HIGH); 
+
+  pinMode(direction_L,INPUT);    
+  digitalWrite(direction_L,HIGH);
+
+  attachInterrupt(digitalPinToInterrupt(R_count_inter_pin), pulsing_R, RISING);
+  attachInterrupt(digitalPinToInterrupt(L_count_inter_pin), pulsing_L, RISING);
+  //compass too
+
+}
 
 void loop() {
+    int pw1L, pw2R;
+    Joystick(pw1L, pw2R);
 
-    //Serial.print(count);
     lcd.setCursor(0, 0);
     lcd.print("Sup jaakko");
-    //delay(200);
-    Serial.print("A count");
-    Serial.print(L_pulse);
-    Serial.print("\t");
 
+    Serial.print(" pw1L = ");
+    Serial.print(pw1L);
 
-    Serial.print("B count");
-    Serial.print(R_pulse);
+    //ASK USER FOR DESIRED LEFT AND RIGHT MOTOR DRIVE DISTANCE
+    DriveDistance(5, 7);
+    //if (pw1L>0){ digitalWrite(Dir_Motor_L, forward); } else { digitalWrite(Dir_Motor_L, backward);};
+    //if (pw2R>0){ digitalWrite(Dir_Motor_R, forward); } else { digitalWrite(Dir_Motor_R, backward);};
 
-    delay(2000);
-    
-
-    //analogWrite(PWM1, 240); //thing goes vroom vroom
-    //analogWrite(PWM2, 240);  //thing goes vroom vroom
-
+    //analogWrite( PWM_Motor_L, pw1L); 
+    //analogWrite( PWM_Motor_R, pw2R);
 
     //current problem: 1 motor seems to work while the other doesn't
+    lcd.clear();
 
 }
 
-/*
-void pin_ISR()
-//this if statemeent currently doesnt work but is the idea of exercise isr 2.0
-//get after break try to get this to work lol
-//
-{
-  if(encoderBRight == HIGH) { //if pin 19 is presssed and pin 18 is HIGH, ++
-    count++;
-    lcd.setCursor(0, 1);
-    lcd.print("encoder B HIGH");
-  }
-  else { //if pin 19 is presssed and pin 18 is LOW, --
-    count--;
-    lcd.setCursor(0, 1);
-    lcd.print("encoder B low");
-  }
-  if(encoderARight == HIGH) { //if pin 19 is presssed and pin 18 is HIGH, ++
-    count++;
-    lcd.setCursor(0, 1);
-    lcd.print("encoder A HIGH");
-    
-  }
-  else { //if pin 19 is presssed and pin 18 is LOW, --
-    count--;
-    lcd.setCursor(0, 1);
-    lcd.print("encoder A low");
-  }
- */
-
-
- // Serial.print("Pressed");
-  
-  //delay(500);
-
-
-
-
 void pulsing_R(void) {
-  if(digitalRead(directionR) == 0) { R_pulse--; } else R_pulse++;
+  if(digitalRead(direction_R) == 0) { R_pulse--; } else R_pulse++;
   lcd.setCursor(0, 1);
   lcd.println("pulsing_R"); 
 }
 
-
-
-
-
-
-
-
 void pulsing_L(void) {
-  if(digitalRead(directionL) == 0) { L_pulse--; } else L_pulse++;
+  if(digitalRead(direction_L) == 0) { L_pulse--; } else L_pulse++;
   lcd.setCursor(0, 1);
-  lcd.print("pulsing_L");
+  lcd.println("pulsing_L");
+}
 
+//rotate joystick 45 degrees and it will work
+
+void Joystick(int& x_val, int& y_val) {
+  float sensorValueX = analogRead(A8);
+  float sensorValueY = analogRead(A9);
+
+  x_val = ((sensorValueX - 491.0) / 532.0) * 255; //adjusted for joystick calibration
+  y_val = ((sensorValueY - 512.0) / 511.0) * 255;
+
+  //returns range from -255 to 255
+}
+
+//function that accepts int distance for each motor and performs the task
+void DriveDistance(int distL, int distR) {
+  // distance units in this function are PULSES
+  R_pulse=0;
+  L_pulse=0;
+
+  //determine forwards or reverse for each motor
+  if (distL > 0) digitalWrite(Dir_Motor_L, forward); 
+  else digitalWrite(Dir_Motor_L, backward);
+  if (distR > 0) digitalWrite(Dir_Motor_R, forward); 
+  else digitalWrite(Dir_Motor_R, backward);
+
+  analogWrite( PWM_Motor_L, 69);
+  analogWrite( PWM_Motor_R, 69);
+
+  byte bk_L=1;
+  byte bk_R=1;
+  
+  while(bk_R != 0 && bk_L != 0) {
+   if (abs(L_pulse)>abs(distL)) {    
+        analogWrite( PWM_Motor_L, 0);  // set PWM value M2PWM  pin 10
+        bk_L = 0; 
+        Serial.print(" Stop L = "); Serial.println(L_pulse);  
+        
+     }
+
+    if (abs(R_pulse)>abs(distR)) {    
+        analogWrite( PWM_Motor_R, 0);  // set PWM value M2PWM  pin 10
+        bk_R = 0;
+        Serial.print(" Ptop R = "); Serial.println(R_pulse); 
+     }
+
+  }
 }
 
 
