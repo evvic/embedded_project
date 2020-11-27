@@ -1,7 +1,5 @@
 /*
-
   Uses a for loop to print numbers in various formats.
-
 */
 #include <LiquidCrystal.h>
   //LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
@@ -58,11 +56,19 @@ void loop() {
     lcd.setCursor(0, 0);
     lcd.print("Sup jaakko");
     //delay(200);
+    Serial.print("A count");
+    Serial.print(L_pulse);
+    Serial.print("\t");
 
+
+    Serial.print("B count");
+    Serial.print(R_pulse);
+
+    delay(2000);
     
 
-    analogWrite(PWM1, 240); 
-    analogWrite(PWM2, 240);  
+    //analogWrite(PWM1, 240); //thing goes vroom vroom
+    //analogWrite(PWM2, 240);  //thing goes vroom vroom
 
 
     //current problem: 1 motor seems to work while the other doesn't
@@ -109,11 +115,33 @@ void pin_ISR()
 void pulsing_R(void) {
   if(digitalRead(directionR) == 0) { R_pulse--; } else R_pulse++;
   lcd.setCursor(0, 1);
-  lcd.print("pulsing_R");  
+  lcd.println("pulsing_R"); 
 }
+
+
+
+
+
+
+
 
 void pulsing_L(void) {
   if(digitalRead(directionL) == 0) { L_pulse--; } else L_pulse++;
   lcd.setCursor(0, 1);
   lcd.print("pulsing_L");
+
 }
+
+
+
+/*
+ * Homework Questions
+ * 
+ * 1.  165 pulses in one round
+ * 
+ * 2.  One round is 14cm in distance
+ * 
+ * 3.  You would get 1.178,57 pulses after driving 1 meter
+ * 
+ * 4.  You would get 11,78 pulses after driving 1 cm.
+ */
