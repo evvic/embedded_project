@@ -5,6 +5,19 @@
   //LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
   LiquidCrystal lcd(12, 11, 5, 4, 25, 26); //changed wires to make space for encoder
 
+/////////////////////////
+// Compass Definitions //
+/////////////////////////
+
+#include <TimerOne.h>
+#include <Wire.h>
+
+#define CMPS14_address 0x60
+
+/////////////////////////
+//  Motor Definitions  //
+/////////////////////////
+
 #define R_count_inter_pin 3   // R encoder pulse counting interrupt pin
 #define L_count_inter_pin 2
 
@@ -32,9 +45,13 @@ void DriveDistance(int distL, int distR);
 
 void setup() {
   Serial.begin(9600); // open the serial port at 9600 bps:
-  Serial.print("Intro");
+  Serial.println("+----------------------------------+");
+  Serial.println("|         Software Americans       |");
+  Serial.println("+----------------------------------+"); 
   
   lcd.begin(20,4);
+
+  Wire.begin(); //Wire library
 
   pinMode(R_count_inter_pin, INPUT);
   pinMode(L_count_inter_pin, INPUT);
@@ -47,7 +64,8 @@ void setup() {
 
   attachInterrupt(digitalPinToInterrupt(R_count_inter_pin), pulsing_R, RISING);
   attachInterrupt(digitalPinToInterrupt(L_count_inter_pin), pulsing_L, RISING);
-  //compass too
+  //attachInterrupt(digitalPinToInterrupt(CMPS14_address), compass_interupt, RISING);
+  
 
 }
 
@@ -74,6 +92,62 @@ void loop() {
 
 }
 
+
+//rotates car to the desired degree
+bool TurnTo(int desiredDegree) {
+  //read_compass_raw()
+  int difference = desiredDegree - compass_val();
+  for(int i = 0; difference > 2 || difference < -2; i++) {
+    //accomplish turning here
+    if(turnRight(desiredDegree)) {
+      //left motor -> forward & right motor -> reverse
+      DriveDistance(-5, 5); //because a motor isn't working, the broken motor may have to have its driveDistance = 0
+    }
+    else {
+      //left motor -> reverse & right motor -> forward
+      DriveDistance(-5, 5);
+    }
+    if(i > 180) {
+      //error taking too long
+      return false;
+    }
+    difference = desiredDegree - compass_val();
+  }
+  return true;
+}
+
+//determines if car should rotate left or right to achieve desired degree
+bool turnRight(int desiredDegree) {
+  int currentDegree = compass_val();
+  int difference = desiredDegree - currentDegree;
+
+  if(difference == 0) {
+    //error: send an error message car is already alligned
+    return false;
+  }
+      
+  if(abs(difference) > 180 && difference > 0) {
+    //desiredDegree is ahead in degrees and should turn left
+    return false;
+  }
+  else if(abs(difference) > 180 && difference < 0) {
+    //currentDegree is ahead in degrees and should turn right
+    return true;
+  }
+  else if(abs(difference) < 180 && difference > 0) {
+    //desiredDegree is ahead in degrees and should turn right
+    return true;
+  }
+  else if(abs(difference) < 180 && difference < 0) {
+    //currentDegree is ahead in degrees and should turn left
+    return false;
+  }
+  else {
+    //error: send error message with difference, desiredDegree, & currentDegree\\
+    return false;
+  }
+}
+
 void pulsing_R(void) {
   if(digitalRead(direction_R) == 0) { R_pulse--; } else R_pulse++;
   lcd.setCursor(0, 1);
@@ -87,7 +161,6 @@ void pulsing_L(void) {
 }
 
 //rotate joystick 45 degrees and it will work
-
 void Joystick(int& x_val, int& y_val) {
   float sensorValueX = analogRead(A8);
   float sensorValueY = analogRead(A9);
@@ -133,11 +206,30 @@ void DriveDistance(int distL, int distR) {
   }
 }
 
+//reads the raw compass value & converts it from int to degrees
+long int compass_val()
+{
+ 
+  Wire.beginTransmission( (uint8_t) CMPS14_address);
+  Wire.write( (uint8_t) 1);
+  Wire.endTransmission(false);
+
+  Wire.requestFrom( (uint8_t) CMPS14_address,(uint8_t) 1, (uint8_t) true);
+
+  if ( Wire.available() >=1 )
+  {
+    byte OrigCompassVal = Wire.read();//compass value between 0 - 256
+  
+    long int TrueCompassVal = OrigCompassVal; //cast the orig compass value into a long int
+  
+    TrueCompassVal = TrueCompassVal * 360/256; //calculation to get the actual degrees
+  
+    return TrueCompassVal; //final value to get the compass value between 0 - 360
+  };
+}
 
 
 /*
- * Homework Questions
- * 
  * 1.  165 pulses in one round
  * 
  * 2.  One round is 14cm in distance
