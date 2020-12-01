@@ -71,7 +71,7 @@ void setup() {
 
 void loop() {
     int pw1L, pw2R;
-    Joystick(pw1L, pw2R);
+    //Joystick(pw1L, pw2R);
 
     lcd.setCursor(0, 0);
     lcd.print("Sup jaakko");
@@ -80,7 +80,7 @@ void loop() {
     Serial.print(pw1L);
 
     //ASK USER FOR DESIRED LEFT AND RIGHT MOTOR DRIVE DISTANCE
-    DriveDistance(5, 7);
+    //DriveDistance(5, 7);
     //if (pw1L>0){ digitalWrite(Dir_Motor_L, forward); } else { digitalWrite(Dir_Motor_L, backward);};
     //if (pw2R>0){ digitalWrite(Dir_Motor_R, forward); } else { digitalWrite(Dir_Motor_R, backward);};
 
@@ -88,8 +88,10 @@ void loop() {
     //analogWrite( PWM_Motor_R, pw2R);
 
     //current problem: 1 motor seems to work while the other doesn't
+    delay(100);
     lcd.clear();
 
+    TurnTo(90);
 }
 
 
@@ -97,18 +99,42 @@ void loop() {
 bool TurnTo(int desiredDegree) {
   //read_compass_raw()
   int difference = desiredDegree - compass_val();
-  for(int i = 0; difference > 2 || difference < -2; i++) {
+  for(int i = 0; difference > 5 || difference < -5; i++) {
     //accomplish turning here
+    //
+    DegreeOnLCD();
     if(turnRight(desiredDegree)) {
       //left motor -> forward & right motor -> reverse
-      DriveDistance(-5, 5); //because a motor isn't working, the broken motor may have to have its driveDistance = 0
+      Serial.println("turning right... ");
+      DriveDistance(5, 5); //because a motor isn't working, the broken motor may have to have its driveDistance = 0
     }
     else {
       //left motor -> reverse & right motor -> forward
-      DriveDistance(-5, 5);
+      Serial.println("turning left... ");
+      DriveDistance(-5, -5); //this might be opposite
     }
     if(i > 180) {
       //error taking too long
+      Serial.println("error in TurnTo()...");
+      return false;
+    }
+    difference = desiredDegree - compass_val();
+  }
+  for(int i = 0; difference > 2 || difference < -2; i++) {
+    DegreeOnLCD();
+    if(turnRight(desiredDegree)) {
+      //left motor -> forward & right motor -> reverse
+      Serial.println("slightly turning right... ");
+      DriveDistance(1, 1); //because a motor isn't working, the broken motor may have to have its driveDistance = 0
+    }
+    else {
+      //left motor -> reverse & right motor -> forward
+      Serial.println("slightly turning left... ");
+      DriveDistance(-1, -1); //this might be opposite
+    }
+    if(i > 180) {
+      //error taking too long
+      Serial.println("error in TurnTo()...");
       return false;
     }
     difference = desiredDegree - compass_val();
@@ -123,6 +149,7 @@ bool turnRight(int desiredDegree) {
 
   if(difference == 0) {
     //error: send an error message car is already alligned
+    
     return false;
   }
       
@@ -151,19 +178,19 @@ bool turnRight(int desiredDegree) {
 void pulsing_R(void) {
   if(digitalRead(direction_R) == 0) { R_pulse--; } else R_pulse++;
   lcd.setCursor(0, 1);
-  lcd.println("pulsing_R"); 
+  lcd.print("pulsing_R"); 
 }
 
 void pulsing_L(void) {
   if(digitalRead(direction_L) == 0) { L_pulse--; } else L_pulse++;
   lcd.setCursor(0, 1);
-  lcd.println("pulsing_L");
+  lcd.print("pulsing_L");
 }
 
 //rotate joystick 45 degrees and it will work
 void Joystick(int& x_val, int& y_val) {
-  float sensorValueX = analogRead(A8);
-  float sensorValueY = analogRead(A9);
+  float sensorValueX = analogRead(A8); //A8
+  float sensorValueY = analogRead(A9); //A9
 
   x_val = ((sensorValueX - 491.0) / 532.0) * 255; //adjusted for joystick calibration
   y_val = ((sensorValueY - 512.0) / 511.0) * 255;
@@ -223,9 +250,19 @@ long int compass_val()
     long int TrueCompassVal = OrigCompassVal; //cast the orig compass value into a long int
   
     TrueCompassVal = TrueCompassVal * 360/256; //calculation to get the actual degrees
+
+    Serial.print("raw compass value: ");
+    Serial.println(TrueCompassVal);
   
     return TrueCompassVal; //final value to get the compass value between 0 - 360
   };
+}
+
+void DegreeOnLCD() {
+  //lcd.clear();
+  lcd.setCursor(0, 2);
+  lcd.print("current degree: "); 
+  lcd.print(compass_val());
 }
 
 
