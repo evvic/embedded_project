@@ -1,5 +1,8 @@
 /*
   Uses a joystick to move a car around
+
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  MAKE ONE FUNCTION FOR LCD DISPLAY TO DISPLAY ALL VALUES ON SCREEN AT ONCE
 */
 #include <LiquidCrystal.h>
   //LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
@@ -63,21 +66,19 @@ void setup() {
   digitalWrite(direction_L,HIGH);
 
   attachInterrupt(digitalPinToInterrupt(R_count_inter_pin), pulsing_R, RISING);
-  attachInterrupt(digitalPinToInterrupt(L_count_inter_pin), pulsing_L, RISING);
-  //attachInterrupt(digitalPinToInterrupt(CMPS14_address), compass_interupt, RISING);
-  
+  attachInterrupt(digitalPinToInterrupt(L_count_inter_pin), pulsing_L, RISING); 
+
 
 }
 
 void loop() {
+    int one;
     int pw1L, pw2R;
-    //Joystick(pw1L, pw2R);
+    Joystick(pw1L, pw2R);
+   
 
-    lcd.setCursor(0, 0);
-    lcd.print("Sup jaakko");
-
-    Serial.print(" pw1L = ");
-    Serial.print(pw1L);
+   // lcd.setCursor(0, 0);
+    //lcd.print("Sup jaakko");
 
     //ASK USER FOR DESIRED LEFT AND RIGHT MOTOR DRIVE DISTANCE
     //DriveDistance(5, 7);
@@ -88,10 +89,26 @@ void loop() {
     //analogWrite( PWM_Motor_R, pw2R);
 
     //current problem: 1 motor seems to work while the other doesn't
+    //DriveDistance(10, -10);
+
+    ///TurnTo(90); //turns to 90 degrees
+
+
+    if(Serial.available() > 0) {
+      one  = Serial.read();
+      Serial.print("I received: ");
+      Serial.println(one, DEC);
+    }
+    /*
+    if(one == 0) {
+      Serial.println("IN OG IF STATEMENT");
+      TurnAmount(-10);
+      one = 1;
+    }
+    */
     delay(100);
     lcd.clear();
-
-    TurnTo(90);
+    
 }
 
 
@@ -102,7 +119,7 @@ bool TurnTo(int desiredDegree) {
   for(int i = 0; difference > 5 || difference < -5; i++) {
     //accomplish turning here
     //
-    DegreeOnLCD();
+    //DegreeOnLCD();
     if(turnRight(desiredDegree)) {
       //left motor -> forward & right motor -> reverse
       Serial.println("turning right... ");
@@ -121,7 +138,7 @@ bool TurnTo(int desiredDegree) {
     difference = desiredDegree - compass_val();
   }
   for(int i = 0; difference > 2 || difference < -2; i++) {
-    DegreeOnLCD();
+    //DegreeOnLCD();
     if(turnRight(desiredDegree)) {
       //left motor -> forward & right motor -> reverse
       Serial.println("slightly turning right... ");
@@ -177,14 +194,16 @@ bool turnRight(int desiredDegree) {
 
 void pulsing_R(void) {
   if(digitalRead(direction_R) == 0) { R_pulse--; } else R_pulse++;
-  lcd.setCursor(0, 1);
+  lcd.setCursor(0, 0);
   lcd.print("pulsing_R"); 
+  delay(400);
 }
 
 void pulsing_L(void) {
   if(digitalRead(direction_L) == 0) { L_pulse--; } else L_pulse++;
   lcd.setCursor(0, 1);
   lcd.print("pulsing_L");
+  delay(400);
 }
 
 //rotate joystick 45 degrees and it will work
@@ -234,7 +253,7 @@ void DriveDistance(int distL, int distR) {
 }
 
 //reads the raw compass value & converts it from int to degrees
-long int compass_val()
+int compass_val()
 {
  
   Wire.beginTransmission( (uint8_t) CMPS14_address);
@@ -245,9 +264,9 @@ long int compass_val()
 
   if ( Wire.available() >=1 )
   {
-    byte OrigCompassVal = Wire.read();//compass value between 0 - 256
+    byte OrigCompassVal = Wire.read();//compass value between 0 - 255
   
-    long int TrueCompassVal = OrigCompassVal; //cast the orig compass value into a long int
+    int TrueCompassVal = OrigCompassVal; //cast the orig compass value into a long int
   
     TrueCompassVal = TrueCompassVal * 360/256; //calculation to get the actual degrees
 
@@ -259,10 +278,97 @@ long int compass_val()
 }
 
 void DegreeOnLCD() {
-  //lcd.clear();
+  lcd.clear();
   lcd.setCursor(0, 2);
-  lcd.print("current degree: "); 
-  lcd.print(compass_val());
+  lcd.print("current degree blw"); 
+  lcd.setCursor(0,3);
+  int i_compassValue;
+  i_compassValue = compass_val();
+  lcd.print(i_compassValue);
+  delay(400);
+}
+
+///probably still some bugs but IS WORKING
+bool TurnAmount(int turnDegrees) {
+  Serial.print("TurnAmount(int turnDegrees = ");
+  Serial.println(turnDegrees);
+  if(turnDegrees == 0) return true;
+  
+  int currentDegree = compass_val();
+  Serial.print("currentDegree = ");
+  Serial.println(currentDegree);
+  int desiredDegree = currentDegree + turnDegrees;
+
+  int amountOf360s, baseDesiredDegree; //variables for if > =-360 
+   
+  if(desiredDegree < 0) { baseDesiredDegree = desiredDegree + (amountOf360s * 360); } // i.e. 750 degrees = 30 degrees
+  else { baseDesiredDegree = desiredDegree - (amountOf360s * 360); } // i.e. 750 degrees = 30 degrees
+
+  //for if the desired degree > 360
+  if(abs(desiredDegree) > 360 && turnDegrees > 0) {
+    //turning right a whole 360 i amount of times...
+    amountOf360s = abs(desiredDegree) % 360;
+    
+    for(int i = 0; i < amountOf360s; i++) {
+      DriveDistance(10, 10); //initialize it set to not eual
+      while(compass_val() != currentDegree || compass_val() != (currentDegree + 1) || compass_val() != (currentDegree - 1)) 
+      { DriveDistance(1, 1); } //keep turning right until a full 360 is accomplished
+      if(desiredDegree > 360) { desiredDegree = desiredDegree - 360; }
+      else if(desiredDegree < -360) {desiredDegree = desiredDegree + 360;}      
+    }
+  }
+  else if(abs(desiredDegree) > 360 && turnDegrees < 0) {
+    //turning left a whole 360 i amount of times
+    amountOf360s = abs(desiredDegree) % 360;
+    
+    for(int i = 0; i < amountOf360s; i++) {
+      DriveDistance(-10, -10); //initialize it set to not eual
+      while(compass_val() != currentDegree || compass_val() != (currentDegree + 1) || compass_val() != (currentDegree - 1)) 
+      { DriveDistance(-1, -1); } //keep turning right until a full 360 is accomplished
+      if(desiredDegree > 360) { desiredDegree = desiredDegree - 360; }
+      else if(desiredDegree < -360) {desiredDegree = desiredDegree + 360;}      
+    }
+  }
+  Serial.println("at part when everything is < 360");
+  //this part has all degrees < 360
+  if(turnDegrees > 0) {
+    //turn right
+    if(baseDesiredDegree < 0) baseDesiredDegree += 360;
+    Serial.println("turn right statement");
+    for(int i = 0; currentDegree != baseDesiredDegree && currentDegree != (baseDesiredDegree + 1) && currentDegree != (baseDesiredDegree - 1) ; i++) {
+      DriveDistance(1, 1);
+      currentDegree = compass_val();
+      Serial.print("currentDegree = ");
+      Serial.println(currentDegree);
+      Serial.print("baseDesiredDegree = ");
+      Serial.println(baseDesiredDegree);
+      if(i > 360) { Serial.println("error in turning right to amount"); return false; } //error taking way too long to reach
+    } 
+    Serial.println("########################################");
+    Serial.println("########################################");
+    Serial.println("########################################");
+    return true;
+  }
+  else if(turnDegrees < 0) {
+    //turn left
+    Serial.println("turn left statement");
+    if(baseDesiredDegree < 0) baseDesiredDegree += 360;
+    for(int i = 0; currentDegree != baseDesiredDegree && currentDegree != (baseDesiredDegree + 1) && currentDegree != (baseDesiredDegree - 1); i++) {
+      DriveDistance(-1, -1);
+      currentDegree = compass_val();
+      Serial.print("currentDegree = ");
+      Serial.println(currentDegree);
+      Serial.print("baseDesiredDegree = ");
+      Serial.println(baseDesiredDegree);
+      if(i > 360) { Serial.println("error in turning left to amount"); return false; }//error taking way too long to reach 
+    } 
+    return true;
+  }
+  else {
+    //already at zero, techinically it succeeded?
+    return false; //temp
+  }
+  return false;
 }
 
 
