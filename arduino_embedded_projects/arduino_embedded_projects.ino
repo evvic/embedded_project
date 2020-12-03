@@ -68,45 +68,56 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(R_count_inter_pin), pulsing_R, RISING);
   attachInterrupt(digitalPinToInterrupt(L_count_inter_pin), pulsing_L, RISING); 
 
+  Serial.println("Enter a command into the Serial monitor to move the car!");
+  Serial.println("Enter \"help\" or \"help:\" for details.");
 
 }
 
 void loop() {
-    int one;
-    int pw1L, pw2R;
-    Joystick(pw1L, pw2R);
-   
+    int userInp;
+
+    String command;
 
    // lcd.setCursor(0, 0);
     //lcd.print("Sup jaakko");
 
-    //ASK USER FOR DESIRED LEFT AND RIGHT MOTOR DRIVE DISTANCE
-    //DriveDistance(5, 7);
-    //if (pw1L>0){ digitalWrite(Dir_Motor_L, forward); } else { digitalWrite(Dir_Motor_L, backward);};
-    //if (pw2R>0){ digitalWrite(Dir_Motor_R, forward); } else { digitalWrite(Dir_Motor_R, backward);};
-
-    //analogWrite( PWM_Motor_L, pw1L); 
-    //analogWrite( PWM_Motor_R, pw2R);
-
-    //current problem: 1 motor seems to work while the other doesn't
     //DriveDistance(10, -10);
 
     ///TurnTo(90); //turns to 90 degrees
 
-
+    //read command
+    
     if(Serial.available() > 0) {
-      one  = Serial.read();
+      command  = Serial.readStringUntil(':');
+      userInp = Serial.parseInt();
       Serial.print("I received: ");
-      Serial.println(one, DEC);
+      command.toUpperCase(); //everything capital for standard
+      Serial.print(command);
+      Serial.print(" and: ");
+      Serial.println(userInp);
+      Serial.read(); //flush the '\n' buffer
+
+      if(command == "MOVE") {
+        Serial.println("MOVE == MOVE");
+        DriveDistance(userInp, -userInp);
+      }
+      else if(command == "TURN") {
+        Serial.println("TURN == TURN");
+        TurnAmount(userInp);
+      }
+      else if(command == "JOYSTICK" || command == "JOYSTICK\n") {
+        Serial.println("JOYSTICK == JOYSTICK");
+        JoystickController();
+      }
+      else if(command == "HELP" || command == "HELP\n") {HelpCommand();}
+      else {
+        Serial.print("ERROR: \""); Serial.print(command); Serial.println("\" is not a valis command.");
+        Serial.println("Enter: \"MOVE\", \"TURN\" or \"HELP\"");
+      }
     }
-    /*
-    if(one == 0) {
-      Serial.println("IN OG IF STATEMENT");
-      TurnAmount(-10);
-      one = 1;
-    }
-    */
+
     delay(100);
+    
     lcd.clear();
     
 }
@@ -196,14 +207,16 @@ void pulsing_R(void) {
   if(digitalRead(direction_R) == 0) { R_pulse--; } else R_pulse++;
   lcd.setCursor(0, 0);
   lcd.print("pulsing_R"); 
-  delay(400);
+  //delay(400);
+  Serial.println("pulsing_R");
 }
 
 void pulsing_L(void) {
   if(digitalRead(direction_L) == 0) { L_pulse--; } else L_pulse++;
   lcd.setCursor(0, 1);
   lcd.print("pulsing_L");
-  delay(400);
+  //delay(400);
+  Serial.println("pulsing_L");
 }
 
 //rotate joystick 45 degrees and it will work
@@ -246,7 +259,7 @@ void DriveDistance(int distL, int distR) {
     if (abs(R_pulse)>abs(distR)) {    
         analogWrite( PWM_Motor_R, 0);  // set PWM value M2PWM  pin 10
         bk_R = 0;
-        Serial.print(" Ptop R = "); Serial.println(R_pulse); 
+        Serial.print(" Stop R = "); Serial.println(R_pulse); 
      }
 
   }
@@ -369,6 +382,46 @@ bool TurnAmount(int turnDegrees) {
     return false; //temp
   }
   return false;
+}
+
+void JoystickController() {
+  int pw1L = 0, pw2R = 0;
+  String command = "";
+  Serial.println("Car is controllable by joystick!");
+  Serial.println("Enter \"stop\" to stop controlling by joystick.");
+
+  while(command != "STOP") {
+    Joystick(pw1L, pw2R);
+    Serial.print(pw1L); Serial.print("\t"); Serial.println(pw2R);
+    
+    if (pw1L > 0) digitalWrite(Dir_Motor_L, forward); 
+    else digitalWrite(Dir_Motor_L, backward);
+    if (pw2R > 0) digitalWrite(Dir_Motor_R, forward); 
+    else digitalWrite(Dir_Motor_R, backward);
+  
+    analogWrite( PWM_Motor_L, pw1L);
+    analogWrite( PWM_Motor_R, pw2R);
+    
+    if(Serial.available() > 0) {
+      command = Serial.readStringUntil('\n');
+      command.toUpperCase(); //everything capital for standard
+    }
+    
+    Serial.println("seven");
+    delay(100);
+    
+  }
+   Serial.println("Leaving Joystick.");
+   
+   analogWrite( PWM_Motor_L, 0);
+   analogWrite( PWM_Motor_R, 0);
+}
+
+void HelpCommand() {
+  Serial.println("Use commands to move the car!");
+  Serial.println("Enter MOVE or TURN, followed by a ':' (colon), then an integer.");
+  Serial.println("   i.e. \"MOVE:10\" to move the car by 10 units.");
+  Serial.println("   i.e. \"TURN:-50\" to turn the car left by 50 degrees.");
 }
 
 
