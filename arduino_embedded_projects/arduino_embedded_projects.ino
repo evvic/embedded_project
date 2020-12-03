@@ -41,10 +41,19 @@
 volatile int R_pulse = 0, L_pulse = 0;
 volatile byte count = 0;
 
-//Joystick funciton
-void Joystick(int& x_val, int& y_val);
-//Perform drive distance
-void DriveDistance(int distL, int distR);
+//////////////////////////
+// Function Definitions //
+//////////////////////////
+
+void Joystick(int& x_val, int& y_val); //returns x_val & y_val by reference. -255 to 255 can be used by DriveDistance()
+void DriveDistance(int distL, int distR); //Moves left motor distL pulses, & right motor distR pulses
+void HelpCommand(); //prints to serial the commands that can be performed
+void JoystickController(); //function to control joystick, ends when user types "exit"
+bool TurnTo(int desiredDegree); //turns car to the degree user wants, returns false if error/couldn't accomplish
+bool turnRight(int desiredDegree); //takes the desired degree and tells if car should turn right (true) or left (false), which path is easier
+void DegreeOnLCD(); //just prints degree on LCD, might not be used
+int compass_val(); //reads raw compass value, translates it from 0 - 360 and returns that int
+bool TurnAmount(int turnDegrees); //tells car to turn "turnDegrees" amount from current position. negative = left, pos = right
 
 void setup() {
   Serial.begin(9600); // open the serial port at 9600 bps:
@@ -70,12 +79,10 @@ void setup() {
 
   Serial.println("Enter a command into the Serial monitor to move the car!");
   Serial.println("Enter \"help\" or \"help:\" for details.");
-
 }
 
 void loop() {
     int userInp;
-
     String command;
 
    // lcd.setCursor(0, 0);
@@ -85,16 +92,14 @@ void loop() {
 
     ///TurnTo(90); //turns to 90 degrees
 
-    //read command
+    /////////////////////////
+    //  Serial  Interface  //
+    /////////////////////////
     
     if(Serial.available() > 0) {
       command  = Serial.readStringUntil(':');
       userInp = Serial.parseInt();
-      Serial.print("I received: ");
       command.toUpperCase(); //everything capital for standard
-      Serial.print(command);
-      Serial.print(" and: ");
-      Serial.println(userInp);
       Serial.read(); //flush the '\n' buffer
 
       if(command == "MOVE") {
@@ -208,7 +213,7 @@ void pulsing_R(void) {
   lcd.setCursor(0, 0);
   lcd.print("pulsing_R"); 
   //delay(400);
-  Serial.println("pulsing_R");
+  //Serial.println("pulsing_R");
 }
 
 void pulsing_L(void) {
@@ -216,7 +221,7 @@ void pulsing_L(void) {
   lcd.setCursor(0, 1);
   lcd.print("pulsing_L");
   //delay(400);
-  Serial.println("pulsing_L");
+  //Serial.println("pulsing_L");
 }
 
 //rotate joystick 45 degrees and it will work
@@ -360,6 +365,7 @@ bool TurnAmount(int turnDegrees) {
     Serial.println("########################################");
     Serial.println("########################################");
     Serial.println("########################################");
+    DriveDistance(0, 0);
     return true;
   }
   else if(turnDegrees < 0) {
