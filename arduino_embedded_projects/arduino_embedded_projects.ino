@@ -120,6 +120,7 @@ void loop() {
         Serial.println("Enter: \"MOVE\", \"TURN\" or \"HELP\"");
       }
     }
+    Serial.println("after serial menu.");
 
     delay(100);
     
@@ -209,7 +210,8 @@ bool turnRight(int desiredDegree) {
 }
 
 void pulsing_R(void) {
-  if(digitalRead(direction_R) == 0) { R_pulse--; } else R_pulse++;
+  //  if(digitalRead(direction_R) == 0) { R_pulse--; } else R_pulse++;
+  if(digitalRead(direction_R) == 0) { R_pulse++; } else R_pulse--;
   lcd.setCursor(0, 0);
   lcd.print("pulsing_R"); 
   //delay(400);
@@ -217,7 +219,9 @@ void pulsing_R(void) {
 }
 
 void pulsing_L(void) {
-  if(digitalRead(direction_L) == 0) { L_pulse--; } else L_pulse++;
+  //if(digitalRead(direction_L) == 0) { L_pulse--; } else L_pulse++;
+
+  if(digitalRead(direction_L) == 0) { L_pulse++; } else L_pulse--;
   lcd.setCursor(0, 1);
   lcd.print("pulsing_L");
   //delay(400);
@@ -347,14 +351,19 @@ bool TurnAmount(int turnDegrees) {
       else if(desiredDegree < -360) {desiredDegree = desiredDegree + 360;}      
     }
   }
+
+  
   Serial.println("at part when everything is < 360");
   //this part has all degrees < 360
+  
   if(turnDegrees > 0) {
     //turn right
     if(baseDesiredDegree < 0) baseDesiredDegree += 360;
     Serial.println("turn right statement");
-    for(int i = 0; currentDegree != baseDesiredDegree && currentDegree != (baseDesiredDegree + 1) && currentDegree != (baseDesiredDegree - 1) ; i++) {
+    //difference > 2 || difference < -2
+    for(int i = 0; (currentDegree - desiredDegree) < 4 || (currentDegree - desiredDegree) < -4 ; i++) {
       DriveDistance(1, 1);
+      //Jaakko replace this ^
       currentDegree = compass_val();
       Serial.print("currentDegree = ");
       Serial.println(currentDegree);
@@ -365,15 +374,22 @@ bool TurnAmount(int turnDegrees) {
     Serial.println("########################################");
     Serial.println("########################################");
     Serial.println("########################################");
-    DriveDistance(0, 0);
-    return true;
+    if(TurnTo(desiredDegree)) {
+      //DriveDistance(0, 0);
+      Serial.println("Returning true");
+      return true;
+    }
+    //DriveDistance(0, 0);
+    Serial.println("What're you doing here");
+    
   }
   else if(turnDegrees < 0) {
     //turn left
     Serial.println("turn left statement");
     if(baseDesiredDegree < 0) baseDesiredDegree += 360;
-    for(int i = 0; currentDegree != baseDesiredDegree && currentDegree != (baseDesiredDegree + 1) && currentDegree != (baseDesiredDegree - 1); i++) {
+    for(int i = 0; (currentDegree - desiredDegree) < 4 || (currentDegree - desiredDegree) < -4 ; i++) {
       DriveDistance(-1, -1);
+      //Jaakko replace this ^
       currentDegree = compass_val();
       Serial.print("currentDegree = ");
       Serial.println(currentDegree);
@@ -381,7 +397,16 @@ bool TurnAmount(int turnDegrees) {
       Serial.println(baseDesiredDegree);
       if(i > 360) { Serial.println("error in turning left to amount"); return false; }//error taking way too long to reach 
     } 
-    return true;
+    Serial.println("########################################");
+    Serial.println("########################################");
+    Serial.println("########################################");
+    if(TurnTo(desiredDegree)) {
+      //DriveDistance(0, 0);
+      Serial.println("Returning true");
+      return true;
+    }
+    //DriveDistance(0, 0);
+    Serial.println("What're you doing here");
   }
   else {
     //already at zero, techinically it succeeded?
